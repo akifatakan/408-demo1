@@ -131,6 +131,7 @@ namespace Client
             // 
             // IFsubscribe
             // 
+            this.IFsubscribe.Enabled = false;
             this.IFsubscribe.Location = new System.Drawing.Point(129, 152);
             this.IFsubscribe.Name = "IFsubscribe";
             this.IFsubscribe.Size = new System.Drawing.Size(98, 27);
@@ -141,6 +142,7 @@ namespace Client
             // 
             // IFunsubscribe
             // 
+            this.IFunsubscribe.Enabled = false;
             this.IFunsubscribe.Location = new System.Drawing.Point(233, 152);
             this.IFunsubscribe.Name = "IFunsubscribe";
             this.IFunsubscribe.Size = new System.Drawing.Size(98, 27);
@@ -230,6 +232,7 @@ namespace Client
             // 
             // disconnect_button
             // 
+            this.disconnect_button.Enabled = false;
             this.disconnect_button.Location = new System.Drawing.Point(156, 92);
             this.disconnect_button.Name = "disconnect_button";
             this.disconnect_button.Size = new System.Drawing.Size(152, 25);

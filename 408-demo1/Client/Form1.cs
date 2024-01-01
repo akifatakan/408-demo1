@@ -14,12 +14,13 @@ namespace Client
 {
     public partial class Form1 : Form
     {
-        string localusername = " ";
+        string localusername = "";
         Socket clientSocket;
 
         bool terminating = false;
         bool connected = false;
-
+        bool ifSubscribed = false;
+        bool spsSubscribed = false;
 
         private const int IF100MessageType = 6;
         private const int SPS101MessageType = 7;
@@ -47,7 +48,14 @@ namespace Client
                 try
                 {
                     clientSocket.Connect(IP, portNum);
+                    
                     connectButton.Enabled = false;
+                    hostText.Enabled = false;
+                    NameText.Enabled = false;
+                    PortText.Enabled = false;
+                    disconnect_button.Enabled = true;
+                    IFsubscribe.Enabled = true;
+                    
                     connected = true;
                     IFsubscribe.Enabled = true;
                     SPSsubscribe.Enabled = true;
@@ -180,6 +188,8 @@ namespace Client
             SendSubscription(text);
             clientAction.AppendText("Subscribed to IF100 channel\n");
             IFunsubscribe.Enabled = true;
+            IFsubscribe.Enabled = false;
+            ifSubscribed = true;
 
         }
 
@@ -189,6 +199,8 @@ namespace Client
             SendSubscription(text);
             clientAction.AppendText("Subscribed to SPS101 channel\n");
             SPSunsubscribe.Enabled = true;
+            SPSsubscribe.Enabled = false;
+            spsSubscribed = true;
         }
 
 
@@ -219,6 +231,8 @@ namespace Client
 
             clientAction.AppendText("Unubscribed to SPS101 channel\n");
             SPSsubscribe.Enabled = true;
+            SPSunsubscribe.Enabled = false;
+            spsSubscribed=false;
 
         }
 
@@ -226,9 +240,10 @@ namespace Client
         {
             string text = 4 + "\t" + localusername + "\t" + "IF100unSubscribe";
             SendunSubscription(text);
-
             clientAction.AppendText("Unsubscribed to IF100 channel\n");
             IFsubscribe.Enabled = true;
+            IFunsubscribe.Enabled = false;
+            ifSubscribed = false;
         }
 
 
@@ -244,7 +259,7 @@ namespace Client
         private void SPS101sendbutton_Click(object sender, EventArgs e)
         {
             string message = SPS101sendtext.Text;
-            IF100sendtext.Clear();
+            SPS101sendtext.Clear();
             SendMessage(message, "SPS101");
         }
 
@@ -253,7 +268,7 @@ namespace Client
             string name = localusername;
 
             // Check if the client is subscribed to the channel
-            if ((channel == "IF100" && IFsubscribe.Enabled) || (channel == "SPS101" && SPSsubscribe.Enabled))
+            if ((channel == "IF100" && !ifSubscribed) || (channel == "SPS101" && !spsSubscribed))
             {
                 UpdateUI($"You are not subscribed to {channel} channel. Cannot send message.\n");
                 return;
@@ -263,7 +278,7 @@ namespace Client
             {
                 try
                 {
-                    string formattedMessage = $"{GetMessageType(channel)}{"\t"}{name}{"\t"}{channel}Message{"\t"}{message}";
+                    string formattedMessage = $"{GetMessageType(channel)}{"\t"}{name}{"\t"}{message}";
                     byte[] messageBuffer = Encoding.Default.GetBytes(formattedMessage);
                     clientSocket.Send(messageBuffer);
                 }
@@ -283,23 +298,28 @@ namespace Client
             switch (channel)
             {
                 case "IF100":
-                    return IF100MessageType; // Modify with the appropriate message type for IF100
+                    return IF100MessageType; // Modify with the appropriate message type for IF100 --> 6
                 case "SPS101":
-                    return SPS101MessageType; // Modify with the appropriate message type for SPS101
+                    return SPS101MessageType; // Modify with the appropriate message type for SPS101 --> 7
                 default:
                     return 0; // Default message type
             }
         }
+
         private void disconnect_button_Click(object sender, EventArgs e)
         {
-            terminating = true;
+            //terminating = true;
             clientSocket.Close();
             connected = false;
             clientAction.AppendText("Successfully disconnected.\n");
 
+
+
             disconnect_button.Enabled = false;
             connectButton.Enabled = true;
-
+            hostText.Enabled = true;
+            NameText.Enabled = true;
+            PortText.Enabled = true;
             disconnect_button.BackColor = SystemColors.Control;
         }
 

@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Net;
+using System.Net.Configuration;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -86,9 +87,27 @@ namespace Server
 
                     Byte[] Buffer = new Byte[1024];
                     newClient.Receive(Buffer);
-
-
                     string clientInfo = Encoding.Default.GetString(Buffer);
+                    processIncomingMessage(newClient, clientInfo);
+
+
+                }
+                catch
+                {
+                    if (terminating)
+                    {
+                        listening = false;
+                    }
+                    else
+                    {
+                        serverLogTextBox.AppendText("The socket stopped working.\n");
+                    }
+                }
+            }
+        }
+
+        private void processIncomingMessage(Socket newClient, string clientInfo)
+        {
                     string[] dataParts = clientInfo.Split('\t');
 
                     string type = dataParts[0];
@@ -126,7 +145,6 @@ namespace Server
                     if (dataParts[0] == "2")
                     {
                         string clientName = name;
-                        Receive(newClient);
                         AddToIF100Usernames(clientName, newClient);
                         UpdateIF100Box();
                     }
@@ -156,37 +174,18 @@ namespace Server
                     }
                     if (dataParts[0] == "6")
                     {
-
                         string clientName = name;
-                        string messagetosend = "IF100" + "\t" + clientName + themessage + "\n";
-                        BroadcastMessage(messagetosend, IF100Usernames[clientName]);
+                        string messagetosend = clientName + ": " + themessage + "\n";
+                        BroadcastMessage(name, themessage, "IF100");
                     }
                     if (dataParts[0] == "7")
                     {
 
                         string clientName = name;
-                        string messagetosend = "SPS101" + "\t" + clientName + themessage + "\n";
-                        BroadcastMessage(messagetosend, SPS101Usernames[clientName]);
+                        string messagetosend = clientName + ": " + themessage + "\n";
+                        BroadcastMessage(name, themessage, "SPS101");
                     }
 
-
-
-
-
-
-                }
-                catch
-                {
-                    if (terminating)
-                    {
-                        listening = false;
-                    }
-                    else
-                    {
-                        serverLogTextBox.AppendText("The socket stopped working.\n");
-                    }
-                }
-            }
         }
 
         private void UpdateServerLog()
@@ -232,6 +231,7 @@ namespace Server
                     Byte[] buffer = new Byte[1024];
                     thisClient.Receive(buffer);
                     string incomingMessage = Encoding.Default.GetString(buffer);
+                    processIncomingMessage(thisClient, incomingMessage);
                     incomingMessage = incomingMessage.Substring(0, incomingMessage.IndexOf("\0"));
                     string[] dataParts = incomingMessage.Split('\t');
                     string clientUsername = dataParts[1];
@@ -355,48 +355,36 @@ namespace Server
 
 
 
-
-
-        private void BroadcastMessage(string message, Socket targetSocket)
+        private void BroadcastMessage(string sender, string message, string channel)
         {
-            serverLogTextBox.AppendText($"Broadcasting message: {message} to target: {targetSocket}\n");
-
-            if (targetSocket != null && targetSocket.Connected)
+            serverLogTextBox.AppendText($"Broadcasting message: {message} from {sender} to {channel} channel!\n");
+            if (channel == "IF100")
             {
-                string channelPrefix = "";
-
-                foreach (var pair in IF100Usernames)
+                foreach(var pair in IF100Usernames)
                 {
-                    if (pair.Value == targetSocket)
-                    {
-                        channelPrefix = "IF100";
-                        break;
-                    }
+                    string user = pair.Key;
+                    var socket = pair.Value;
+                    string msg = channel + "\t" + sender + ": " + message + "\n"; 
+                    byte[] messageBuffer = Encoding.Default.GetBytes(msg);
+                    socket.Send(messageBuffer);
+                    serverLogTextBox.AppendText($"Message: {message} from {sender} sent to {user} on {channel} channel.\n");
                 }
-
-                if (string.IsNullOrEmpty(channelPrefix))
+            }
+            else
+            {
+                foreach(var pair in SPS101Usernames)
                 {
-                    foreach (var pair in SPS101Usernames)
-                    {
-                        if (pair.Value == targetSocket)
-                        {
-                            channelPrefix = "SPS101";
-                            break;
-                        }
-                    }
-                }
-
-                if (!string.IsNullOrEmpty(channelPrefix))
-                {
-                    string prefixedMessage = $"{channelPrefix}{'\t'}{message}";
-
-                    byte[] messageBuffer = Encoding.Default.GetBytes(prefixedMessage + "\0");
-                    targetSocket.Send(messageBuffer);
-
-                    serverLogTextBox.AppendText($"{channelPrefix} Message sent to {targetSocket}: {prefixedMessage}\n");
+                    string user = pair.Key;
+                    var socket = pair.Value;
+                    string msg = channel + "\t" + sender + ": " + message + "\n"; 
+                    byte[] messageBuffer = Encoding.Default.GetBytes(msg);
+                    socket.Send(messageBuffer);
+                    serverLogTextBox.AppendText($"Message: {message} from {sender} sent to {user} on {channel} channel.\n");
                 }
             }
         }
+
+
 
         private void Form1_Load(object sender, EventArgs e)
         {
